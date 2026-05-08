@@ -191,16 +191,39 @@
         <p>{{ latestRecommendation.rationale }}</p>
         <div
           v-if="latestRecommendation.scenario_frames.length"
-          class="scenario-list"
+          class="scenario-section"
         >
-          <div
-            v-for="frame in latestRecommendation.scenario_frames"
-            :key="frame.id"
-            class="scenario-frame"
-          >
-            <strong>{{ scenarioFrameLabel(frame, latestRecommendation.action) }}</strong>
-            <span>{{ t.confidence }}: {{ frame.confidence_band }}</span>
-            <p>{{ frame.risk_notes }}</p>
+          <h3>{{ t.scenarios }}</h3>
+          <div class="scenario-list">
+            <div
+              v-for="frame in sortedScenarioFrames(latestRecommendation.scenario_frames)"
+              :key="frame.id"
+              class="scenario-frame"
+            >
+              <div class="scenario-frame-header">
+                <strong>{{ scenarioCaseLabel(frame.scenario_case) }}</strong>
+                <span>{{ scenarioDirectionLabel(frame.direction) }} for {{ latestRecommendation.action }}</span>
+              </div>
+              <span>{{ t.confidence }}: {{ frame.confidence_band }}</span>
+              <div
+                v-if="scenarioEvidenceLines(frame).length"
+                class="scenario-evidence"
+              >
+                <span
+                  v-for="item in scenarioEvidenceLines(frame)"
+                  :key="`${frame.id}-${item}`"
+                >{{ item }}</span>
+              </div>
+              <p>
+                <template
+                  v-for="(segment, index) in riskNoteSegments(frame.risk_notes, latestRecommendation)"
+                  :key="`${frame.id}-${index}`"
+                >
+                  <em v-if="segment.isHeadline">{{ segment.text }}</em>
+                  <template v-else>{{ segment.text }}</template>
+                </template>
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -261,16 +284,39 @@
                     <p>{{ item.rationale }}</p>
                     <div
                       v-if="item.scenario_frames.length"
-                      class="scenario-list"
+                      class="scenario-section"
                     >
-                      <div
-                        v-for="frame in item.scenario_frames"
-                        :key="frame.id"
-                        class="scenario-frame"
-                      >
-                        <strong>{{ scenarioFrameLabel(frame, item.action) }}</strong>
-                        <span>{{ t.confidence }}: {{ frame.confidence_band }}</span>
-                        <p>{{ frame.risk_notes }}</p>
+                      <h3>{{ t.scenarios }}</h3>
+                      <div class="scenario-list">
+                        <div
+                          v-for="frame in sortedScenarioFrames(item.scenario_frames)"
+                          :key="frame.id"
+                          class="scenario-frame"
+                        >
+                          <div class="scenario-frame-header">
+                            <strong>{{ scenarioCaseLabel(frame.scenario_case) }}</strong>
+                            <span>{{ scenarioDirectionLabel(frame.direction) }} for {{ item.action }}</span>
+                          </div>
+                          <span>{{ t.confidence }}: {{ frame.confidence_band }}</span>
+                          <div
+                            v-if="scenarioEvidenceLines(frame).length"
+                            class="scenario-evidence"
+                          >
+                            <span
+                              v-for="item in scenarioEvidenceLines(frame)"
+                              :key="`${frame.id}-${item}`"
+                            >{{ item }}</span>
+                          </div>
+                          <p>
+                            <template
+                              v-for="(segment, index) in riskNoteSegments(frame.risk_notes, item)"
+                              :key="`${frame.id}-${index}`"
+                            >
+                              <em v-if="segment.isHeadline">{{ segment.text }}</em>
+                              <template v-else>{{ segment.text }}</template>
+                            </template>
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -300,13 +346,14 @@ const t = {
   validationFailed: 'Validation failed',
   amount: 'Amount',
   asset: 'Asset',
-  base: 'Base',
-  bull: 'Asset bullish',
-  bear: 'Asset bearish',
+  base: 'Base case',
+  bull: 'Bull case',
+  bear: 'Bear case',
   conditional: 'conditional',
   confidence: 'Confidence',
   adverse: 'adverse',
   hideDetails: 'Hide',
+  scenarios: 'Scenarios',
   supportive: 'supportive',
   showDetails: 'Details',
   timestamp: 'Timestamp',
@@ -531,11 +578,77 @@ function scenarioDirectionLabel(direction: string): string {
   return direction
 }
 
-function scenarioFrameLabel(
-  frame: StrategyRecommendation['scenario_frames'][number],
-  tradeAction: StrategyRecommendation['action'],
-): string {
-  return `${scenarioCaseLabel(frame.scenario_case)}: ${scenarioDirectionLabel(frame.direction)} for ${tradeAction}`
+function sortedScenarioFrames(
+  frames: StrategyRecommendation['scenario_frames'],
+): StrategyRecommendation['scenario_frames'] {
+  const order = { bull: 0, base: 1, bear: 2 }
+  return [...frames].sort((a, b) => order[a.scenario_case] - order[b.scenario_case])
+}
+
+type RiskNoteSegment = {
+  text: string
+  isHeadline: boolean
+}
+
+type ContextInputItem = {
+  headline?: unknown
+}
+
+function scenarioEvidenceLines(frame: StrategyRecommendation['scenario_frames'][number]): string[] {
+  const references = [...frame.catalysts, ...frame.invalidating_conditions]
+  return Array.from(new Set(
+    references
+      .filter(item => item.source === 'context_inputs')
+      .map(item => item.text)
+      .filter(Boolean),
+  ))
+}
+
+function riskNoteSegments(
+  riskNotes: string,
+  recommendation: StrategyRecommendation,
+): RiskNoteSegment[] {
+  const headlines = contextHeadlines(recommendation)
+  const segments: RiskNoteSegment[] = []
+  let cursor = 0
+
+  while (cursor < riskNotes.length) {
+    const nextMatch = headlines
+      .map(headline => ({ headline, start: riskNotes.indexOf(headline, cursor) }))
+      .filter(match => match.start >= 0)
+      .sort((a, b) => a.start - b.start)[0]
+
+    if (!nextMatch) break
+
+    if (nextMatch.start > cursor) {
+      segments.push({ text: riskNotes.slice(cursor, nextMatch.start), isHeadline: false })
+    }
+
+    let end = nextMatch.start + nextMatch.headline.length
+    let text = nextMatch.headline
+    const trailingDot = riskNotes.slice(end).match(/^\s*\./)
+    if (trailingDot) {
+      text += '.'
+      end += trailingDot[0].length
+    }
+
+    segments.push({ text, isHeadline: true })
+    cursor = end
+  }
+
+  if (cursor < riskNotes.length) {
+    segments.push({ text: riskNotes.slice(cursor), isHeadline: false })
+  }
+
+  return segments.length ? segments : [{ text: riskNotes, isHeadline: false }]
+}
+
+function contextHeadlines(recommendation: StrategyRecommendation): string[] {
+  const items = recommendation.context_inputs.items
+  if (!Array.isArray(items)) return []
+  return items
+    .map(item => (item as ContextInputItem).headline)
+    .filter((headline): headline is string => typeof headline === 'string' && Boolean(headline))
 }
 
 function isRecommendationExpanded(id: string): boolean {
@@ -560,11 +673,13 @@ function toggleRecommendation(id: string) {
 .advisory-panel { margin-top: 1rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; }
 .advisory-panel h2 { font-size: 1.125rem; margin: 0 0 0.5rem; }
 .advisory-panel p { margin: 0.5rem 0; }
+.scenario-section { margin-top: 0.875rem; }
+.scenario-section h3 { font-size: 0.9375rem; margin: 0 0 0.5rem; }
 .advisory-panel-danger { color: var(--danger); border-color: var(--danger); }
 .recommendation-do { color: #00a651; font-weight: 800; }
 .recommendation-dont { color: #e11937; font-weight: 800; }
 .recommendation-unsure { color: var(--text); font-weight: 400; }
-.recommendations-table-viewport { max-height: 20rem; overflow: auto; margin-top: 0.75rem; }
+.recommendations-table-viewport { max-height: 30rem; overflow: auto; margin-top: 0.75rem; }
 .recommendations-table { width: 100%; table-layout: fixed; }
 .recommendations-table th,
 .recommendations-table td { padding: 0.5rem; text-align: left; }
@@ -575,7 +690,12 @@ function toggleRecommendation(id: string) {
 .recommendation-toggle.expanded .chevron-triangle { transform: rotate(90deg); }
 .recommendation-detail-row td { background: rgba(0,0,0,0.03); }
 .recommendation-detail-row p { margin: 0.5rem 0; }
-.scenario-list { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
-.scenario-frame { border-top: 1px solid var(--border); padding-top: 0.5rem; }
-.scenario-frame span { display: block; color: var(--text-muted); font-size: 0.8125rem; margin-top: 0.125rem; }
+.scenario-list { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+.scenario-frame { border: 1px solid var(--border); border-radius: 6px; font-size: 0.8125rem; padding: 0.625rem; }
+.scenario-frame-header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.scenario-frame p { font-size: 0.8125rem; line-height: 1.35; }
+.scenario-frame span { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 0.125rem; }
+.scenario-frame-header span { margin-top: 0; text-align: right; }
+.scenario-evidence { display: grid; gap: 0.25rem; margin-top: 0.375rem; }
+.scenario-evidence span { color: var(--text); font-size: 0.75rem; line-height: 1.3; }
 </style>

@@ -287,7 +287,11 @@ describe('TradeNewView', () => {
       quantity: 1,
       candidate: {},
       technical_inputs: {},
-      context_inputs: {},
+      context_inputs: {
+        items: [{
+          headline: 'Alpha One faces selling pressure',
+        }],
+      },
       sentiment_trajectory_inputs: {},
       divergence_inputs: null,
       verdict: 'reject',
@@ -300,7 +304,7 @@ describe('TradeNewView', () => {
           catalysts: [{ source: 'technical_inputs', text: 'Technical vote: negative' }],
           invalidating_conditions: [{ source: 'context_inputs', text: 'Context improves' }],
           confidence_band: 'low',
-          risk_notes: 'This looks weak. Skip it unless the setup improves clearly.',
+          risk_notes: 'Alpha One faces selling pressure . Skip it unless the setup improves clearly.',
           position_size_guidance: 'Treat the candidate as advisory under current guardrails.',
           generated_at: '2026-04-16T00:00:00Z',
         },
@@ -358,23 +362,33 @@ describe('TradeNewView', () => {
     })
     expect(wrapper.text()).toContain("Don't")
     expect(wrapper.text()).toContain('This trade looks weak right now because price momentum is moving against it.')
-    expect(wrapper.text()).toContain('Base: conditional for BUY')
-    expect(wrapper.text()).toContain('Asset bullish: supportive for BUY')
-    expect(wrapper.text()).toContain('Asset bearish: adverse for BUY')
-    expect(wrapper.text()).toContain('This looks weak')
+    expect(wrapper.text()).toContain('Scenarios')
+    expect(wrapper.text()).toContain('Base case')
+    expect(wrapper.text()).toContain('conditional for BUY')
+    expect(wrapper.text()).toContain('Bull case')
+    expect(wrapper.text()).toContain('supportive for BUY')
+    expect(wrapper.text()).toContain('Bear case')
+    expect(wrapper.text()).toContain('adverse for BUY')
+    expect(wrapper.text()).toContain('Alpha One faces selling pressure')
+    expect(wrapper.find('.scenario-evidence').text()).toBe('Context improves')
+    expect(wrapper.find('.scenario-frame p em').text()).toBe('Alpha One faces selling pressure.')
+    expect(wrapper.find('.scenario-frame p').text()).not.toContain('pressure .')
     expect(wrapper.text()).not.toContain('Technical vote: negative')
     expect(wrapper.text()).not.toContain('Treat the candidate as advisory')
     expect(wrapper.text()).not.toContain('Review evidence')
     expect(wrapper.text()).toContain('Previous recommendations')
-    expect(wrapper.text()).not.toContain('Scenarios')
 
     await wrapper.find('.recommendation-toggle').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('.recommendation-detail-row').text()).toContain('This trade looks weak')
-    expect(wrapper.find('.recommendation-detail-row').text()).toContain('This looks weak')
-    expect(wrapper.find('.recommendation-detail-row').text()).toContain('Asset bullish: supportive for BUY')
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('Alpha One faces selling pressure')
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('Bull case')
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('supportive for BUY')
     expect(wrapper.find('.recommendation-detail-row').text()).not.toContain('Technical vote: negative')
+
+    const scenarioTitles = wrapper.findAll('.scenario-frame-header strong').map(item => item.text())
+    expect(scenarioTitles.slice(0, 3)).toEqual(['Bull case', 'Base case', 'Bear case'])
 
     await wrapper.findAll('button').find(button => button.text().includes('BUY Trade'))?.trigger('click')
     await flushPromises()
@@ -466,12 +480,14 @@ describe('TradeNewView', () => {
     await wrapper.findAll('button').find(button => button.text().includes('Should I?'))?.trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Asset bullish: adverse for SELL')
-    expect(wrapper.text()).toContain('Asset bearish: supportive for SELL')
+    expect(wrapper.text()).toContain('Bull case')
+    expect(wrapper.text()).toContain('adverse for SELL')
+    expect(wrapper.text()).toContain('Bear case')
+    expect(wrapper.text()).toContain('supportive for SELL')
     expect(wrapper.text()).toContain('Asset upside would work against this sell trade.')
     expect(wrapper.text()).toContain('Asset downside would support this sell trade.')
-    expect(wrapper.text()).not.toContain('Asset bullish: supportive for BUY')
-    expect(wrapper.text()).not.toContain('Asset bearish: adverse for BUY')
+    expect(wrapper.text()).not.toContain('supportive for BUY')
+    expect(wrapper.text()).not.toContain('adverse for BUY')
   })
 
   it('renders stored recommendation scenario frames with their stored trade action', async () => {
@@ -544,7 +560,8 @@ describe('TradeNewView', () => {
     await flushPromises()
 
     expect(wrapper.find('.recommendation-detail-row').text()).toContain('Stored sell recommendation.')
-    expect(wrapper.find('.recommendation-detail-row').text()).toContain('Asset bullish: adverse for SELL')
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('Bull case')
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('adverse for SELL')
     expect(wrapper.find('.recommendation-detail-row').text()).toContain('Stored bullish case is adverse to the sell.')
   })
 })
