@@ -1,8 +1,8 @@
 import uuid
 from decimal import Decimal
-from django.db import models
-from django.conf import settings
 
+from django.conf import settings
+from django.db import models
 
 PROVIDER_CHOICES = [
     ("openai", "OpenAI"),
@@ -131,3 +131,86 @@ class AICost(models.Model):
 
     def __str__(self):
         return f"{self.ai_auth.user.username} - {self.model_name} ({self.cost_usd})"
+
+
+class StrategyRecommendation(models.Model):
+    VERDICT_CHOICES = [
+        ("approve", "Approve"),
+        ("reject", "Reject"),
+        ("defer", "Defer"),
+    ]
+    ACTION_CHOICES = [("BUY", "Buy"), ("SELL", "Sell")]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    candidate_id = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="strategy_recommendations",
+    )
+    portfolio = models.ForeignKey(
+        "portfolios.Portfolio",
+        on_delete=models.CASCADE,
+        related_name="strategy_recommendations",
+    )
+    asset = models.ForeignKey("markets.Asset", on_delete=models.CASCADE, related_name="strategy_recommendations")
+    action = models.CharField(max_length=4, choices=ACTION_CHOICES)
+    quantity = models.PositiveIntegerField()
+    candidate = models.JSONField()
+    technical_inputs = models.JSONField()
+    context_inputs = models.JSONField()
+    sentiment_trajectory_inputs = models.JSONField()
+    divergence_inputs = models.JSONField(null=True, blank=True)
+    verdict = models.CharField(max_length=10, choices=VERDICT_CHOICES)
+    rationale = models.TextField()
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "strategy_recommendations"
+        ordering = ["-recorded_at"]
+        indexes = [
+            models.Index(fields=["user", "-recorded_at"], name="strategy_re_user_id_369586_idx"),
+            models.Index(fields=["portfolio", "-recorded_at"], name="strategy_re_portfol_a7c5f2_idx"),
+            models.Index(fields=["asset", "-recorded_at"], name="strategy_re_asset_i_83688c_idx"),
+        ]
+
+
+class StrategyScenarioFrame(models.Model):
+    SCENARIO_CASE_CHOICES = [
+        ("base", "Base"),
+        ("bull", "Bull"),
+        ("bear", "Bear"),
+    ]
+    CONFIDENCE_BAND_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    recommendation = models.ForeignKey(
+        StrategyRecommendation,
+        on_delete=models.CASCADE,
+        related_name="scenario_frames",
+    )
+    scenario_case = models.CharField(max_length=10, choices=SCENARIO_CASE_CHOICES)
+    direction = models.CharField(max_length=32)
+    catalysts = models.JSONField()
+    invalidating_conditions = models.JSONField()
+    confidence_band = models.CharField(max_length=10, choices=CONFIDENCE_BAND_CHOICES)
+    risk_notes = models.TextField()
+    position_size_guidance = models.TextField()
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "strategy_scenario_frames"
+        ordering = ["generated_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recommendation", "scenario_case"],
+                name="unique_strategy_scenario_case_per_recommendation",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["recommendation", "scenario_case"], name="strategy_sc_recomme_68964d_idx"),
+        ]

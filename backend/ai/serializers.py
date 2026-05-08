@@ -1,5 +1,13 @@
 from rest_framework import serializers
-from .models import AIAuth, AIInstanceKey, PROVIDER_CHOICES, TASK_MODELS
+
+from .models import (
+    PROVIDER_CHOICES,
+    TASK_MODELS,
+    AIAuth,
+    AIInstanceKey,
+    StrategyRecommendation,
+    StrategyScenarioFrame,
+)
 
 
 class AIAuthSettingsSerializer(serializers.ModelSerializer):
@@ -54,7 +62,9 @@ class AIAuthSettingsSerializer(serializers.ModelSerializer):
         return TASK_MODELS
 
     def _get_instance_default_key(self) -> AIInstanceKey | None:
-        return AIInstanceKey.objects.filter(pk=1).first()
+        if not hasattr(self, "_instance_default_key"):
+            self._instance_default_key = AIInstanceKey.objects.select_related("owner").filter(pk=1).first()
+        return self._instance_default_key
 
     def get_instance_default_enabled(self, obj) -> bool:
         instance_key = self._get_instance_default_key()
@@ -90,3 +100,58 @@ class AIBudgetSerializer(serializers.Serializer):
     percentage_used = serializers.CharField()
     at_limit = serializers.BooleanField()
     should_warn = serializers.BooleanField()
+
+
+class StrategyValidationRequestSerializer(serializers.Serializer):
+    portfolio_id = serializers.UUIDField()
+    asset_id = serializers.UUIDField()
+    action = serializers.ChoiceField(choices=["BUY", "SELL"])
+    quantity = serializers.IntegerField(min_value=1)
+    rationale = serializers.CharField(required=False, allow_blank=True, max_length=255)
+
+    def validate_action(self, value):
+        return value.upper()
+
+
+class StrategyScenarioFrameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StrategyScenarioFrame
+        fields = (
+            "id",
+            "scenario_case",
+            "direction",
+            "catalysts",
+            "invalidating_conditions",
+            "confidence_band",
+            "risk_notes",
+            "position_size_guidance",
+            "generated_at",
+        )
+
+
+class StrategyRecommendationSerializer(serializers.ModelSerializer):
+    asset_display_symbol = serializers.CharField(source="asset.display_symbol", read_only=True)
+    asset_name = serializers.CharField(source="asset.name", read_only=True)
+    scenario_frames = StrategyScenarioFrameSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = StrategyRecommendation
+        fields = (
+            "id",
+            "candidate_id",
+            "portfolio",
+            "asset",
+            "asset_display_symbol",
+            "asset_name",
+            "action",
+            "quantity",
+            "candidate",
+            "technical_inputs",
+            "context_inputs",
+            "sentiment_trajectory_inputs",
+            "divergence_inputs",
+            "verdict",
+            "rationale",
+            "scenario_frames",
+            "recorded_at",
+        )

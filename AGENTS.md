@@ -6,6 +6,7 @@ Monorepo: `backend/` (Django/DRF) + `frontend/` (Vue 3/Vite). Docker Compose orc
 
 ## Project Rules
 
+- Prefer Serena's semantic code tools when Serena is available, especially for codebase exploration, symbol lookup, and targeted edits; if Serena is unavailable, continue normally with standard repo tools.
 - Use `.claude/skills/milestone-lifecycle/SKILL.md` for all milestone work: scaffolding a new milestone, executing tasks from a `00 - milestone coordination.md` file, or preparing a milestone for UAT.
 - Use `.claude/skills/creating-pr/SKILL.md` whenever creating a PR.
 
@@ -89,6 +90,7 @@ Playwright e2E tests in `frontend/e2e/` should verify complete user journeys (au
 2. Run frontend typecheck: `npm run typecheck` — no type errors
 3. Run frontend unit tests: `npm run test` — fix or update as needed
 4. Run frontend e2e tests: `npx playwright test` — full user journeys must work
+5. Before stopping a running backend after large implementation tasks or test runs, check `/api/system/query-stats` for N+1/query-heavy request signals.
 
 If any test fails, investigate and fix the software issue (not the test). Tests are the source of truth.
 

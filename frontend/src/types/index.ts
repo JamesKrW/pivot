@@ -190,6 +190,38 @@ export interface AssetAIInsight {
   news_items: AssetAIInsightNewsItem[]
 }
 
+export interface StrategyScenarioFrame {
+  id: string
+  scenario_case: 'base' | 'bull' | 'bear'
+  direction: string
+  catalysts: Array<{ source: string; text: string }>
+  invalidating_conditions: Array<{ source: string; text: string }>
+  confidence_band: 'low' | 'medium' | 'high'
+  risk_notes: string
+  position_size_guidance: string
+  generated_at: string
+}
+
+export interface StrategyRecommendation {
+  id: string
+  candidate_id: string
+  portfolio: string
+  asset: string
+  asset_display_symbol: string
+  asset_name: string
+  action: 'BUY' | 'SELL'
+  quantity: number
+  candidate: Record<string, unknown>
+  technical_inputs: Record<string, unknown>
+  context_inputs: Record<string, unknown>
+  sentiment_trajectory_inputs: Record<string, unknown>
+  divergence_inputs: Record<string, unknown> | null
+  verdict: 'approve' | 'reject' | 'defer'
+  rationale: string
+  scenario_frames: StrategyScenarioFrame[]
+  recorded_at: string
+}
+
 export interface AlertTriggerTrade {
   action: 'BUY' | 'SELL'
   quantity: number

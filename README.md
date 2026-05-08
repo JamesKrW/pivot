@@ -9,6 +9,7 @@
 
 - **Develop strategies** with technical indicators and backtesting engine
 - **Get AI insights** — Technical analysis powered by your choice of AI providers, with linked source headlines and broader context beyond the ticker
+- **Validate trade ideas** with AI-assisted recommendations that explain whether the current evidence supports buying, selling, or waiting
 - **Backtest strategies** against historical OHLCV data
 - **Paper trade** across 4 global markets: Brazil, US, UK, and Europe (Your market isn't here? Feel free to add! 😄)
 - **Set smart alerts** that trigger trades automatically when conditions are met
@@ -70,6 +71,8 @@ The application will be ready at `http://localhost:3000` in about 30 seconds.
 - **Follow the narrative** — news digest is kept short and readable, so the insight can explain what changed instead of treating each run like a blank slate
 - **Compare scope-level context** — portfolio and watchlist summaries help you see whether the whole set is moving together or diverging
 - **Spot opportunities earlier** — discovery surfaces a capped shortlist of assets worth watching, with a concise reason for each one
+- **Check a trade before you place it** — strategy validation reviews an explicit trade idea against technical signals, market context, and recent sentiment, then returns an advisory approve, reject, or wait verdict. The final decision remains yours.
+- **See the road ahead** — scenario framing adds concise base, upside, and downside cases so recommendations feel clearer about catalysts, invalidation points, confidence, and risk
 - **Budget tracking** — Monitor AI provider costs and set spending limits (API key required — sorry, no flat rate support 😅)
 
 ### Portfolios
@@ -83,6 +86,7 @@ The application will be ready at `http://localhost:3000` in about 30 seconds.
 ### Trading
 - Buy and sell stocks/ETFs with automatic fee calculation
   - (no real money transactions, this is for study)
+- Ask for a friendly trade recommendation before submitting an order, including scenario and risk context when available
 - Track your positions and average costs
 - View current prices and unrealized gains/losses
 
