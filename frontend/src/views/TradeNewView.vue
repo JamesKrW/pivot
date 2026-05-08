@@ -189,6 +189,43 @@
           {{ recommendationDisplay.label }}
         </h2>
         <p>{{ latestRecommendation.rationale }}</p>
+        <div
+          v-if="latestRecommendation.scenario_frames.length"
+          class="scenario-section"
+        >
+          <h3>{{ t.scenarios }}</h3>
+          <div class="scenario-list">
+            <div
+              v-for="frame in sortedScenarioFrames(latestRecommendation.scenario_frames)"
+              :key="frame.id"
+              class="scenario-frame"
+            >
+              <div class="scenario-frame-header">
+                <strong>{{ scenarioCaseLabel(frame.scenario_case) }}</strong>
+                <span>{{ scenarioDirectionLabel(frame.direction) }} for {{ latestRecommendation.action }}</span>
+              </div>
+              <span>{{ t.confidence }}: {{ frame.confidence_band }}</span>
+              <div
+                v-if="scenarioEvidenceLines(frame).length"
+                class="scenario-evidence"
+              >
+                <span
+                  v-for="item in scenarioEvidenceLines(frame)"
+                  :key="`${frame.id}-${item}`"
+                >{{ item }}</span>
+              </div>
+              <p>
+                <template
+                  v-for="(segment, index) in riskNoteSegments(frame.risk_notes, latestRecommendation)"
+                  :key="`${frame.id}-${index}`"
+                >
+                  <em v-if="segment.isHeadline">{{ segment.text }}</em>
+                  <template v-else>{{ segment.text }}</template>
+                </template>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
       <div
         v-if="recommendations.length"
@@ -196,42 +233,95 @@
       >
         <strong>{{ t.previousRecommendations }}</strong>
         <div
-          ref="recommendationsViewport"
           class="recommendations-table-viewport"
-          @scroll="handleRecommendationsScroll"
         >
           <table class="recommendations-table">
             <thead>
               <tr>
-                <th>Asset</th>
-                <th>Trade</th>
-                <th>Amount</th>
-                <th>Verdict</th>
-                <th>Timestamp</th>
+                <th>{{ t.asset }}</th>
+                <th>{{ t.trade }}</th>
+                <th>{{ t.amount }}</th>
+                <th>{{ t.verdict }}</th>
+                <th>{{ t.timestamp }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr :style="{ height: `${recommendationsTopPadding}px` }">
-                <td colspan="5" />
-              </tr>
-              <tr
-                v-for="item in visibleRecommendations"
+              <template
+                v-for="item in recommendations"
                 :key="item.id"
-                :title="item.rationale"
               >
-                <td>{{ item.asset_display_symbol }}</td>
-                <td>{{ item.action }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>
-                  <span :class="displayForVerdict(item.verdict).class">
-                    {{ displayForVerdict(item.verdict).label }}
-                  </span>
-                </td>
-                <td>{{ formatDate(item.recorded_at) }}</td>
-              </tr>
-              <tr :style="{ height: `${recommendationsBottomPadding}px` }">
-                <td colspan="5" />
-              </tr>
+                <tr>
+                  <td>
+                    <button
+                      class="recommendation-toggle"
+                      :class="{ expanded: isRecommendationExpanded(item.id) }"
+                      type="button"
+                      :aria-expanded="isRecommendationExpanded(item.id)"
+                      :aria-label="isRecommendationExpanded(item.id) ? t.hideDetails : t.showDetails"
+                      @click="toggleRecommendation(item.id)"
+                    >
+                      <span
+                        class="chevron-triangle"
+                        aria-hidden="true"
+                      />
+                    </button>
+                    {{ item.asset_display_symbol }}
+                  </td>
+                  <td>{{ item.action }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td>
+                    <span :class="displayForVerdict(item.verdict).class">
+                      {{ displayForVerdict(item.verdict).label }}
+                    </span>
+                  </td>
+                  <td>{{ formatDate(item.recorded_at) }}</td>
+                </tr>
+                <tr
+                  v-if="isRecommendationExpanded(item.id)"
+                  class="recommendation-detail-row"
+                >
+                  <td colspan="5">
+                    <p>{{ item.rationale }}</p>
+                    <div
+                      v-if="item.scenario_frames.length"
+                      class="scenario-section"
+                    >
+                      <h3>{{ t.scenarios }}</h3>
+                      <div class="scenario-list">
+                        <div
+                          v-for="frame in sortedScenarioFrames(item.scenario_frames)"
+                          :key="frame.id"
+                          class="scenario-frame"
+                        >
+                          <div class="scenario-frame-header">
+                            <strong>{{ scenarioCaseLabel(frame.scenario_case) }}</strong>
+                            <span>{{ scenarioDirectionLabel(frame.direction) }} for {{ item.action }}</span>
+                          </div>
+                          <span>{{ t.confidence }}: {{ frame.confidence_band }}</span>
+                          <div
+                            v-if="scenarioEvidenceLines(frame).length"
+                            class="scenario-evidence"
+                          >
+                            <span
+                              v-for="item in scenarioEvidenceLines(frame)"
+                              :key="`${frame.id}-${item}`"
+                            >{{ item }}</span>
+                          </div>
+                          <p>
+                            <template
+                              v-for="(segment, index) in riskNoteSegments(frame.risk_notes, item)"
+                              :key="`${frame.id}-${index}`"
+                            >
+                              <em v-if="segment.isHeadline">{{ segment.text }}</em>
+                              <template v-else>{{ segment.text }}</template>
+                            </template>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -254,6 +344,21 @@ const t = {
   shouldI: 'Should I?',
   previousRecommendations: 'Previous recommendations',
   validationFailed: 'Validation failed',
+  amount: 'Amount',
+  asset: 'Asset',
+  base: 'Base case',
+  bull: 'Bull case',
+  bear: 'Bear case',
+  conditional: 'conditional',
+  confidence: 'Confidence',
+  adverse: 'adverse',
+  hideDetails: 'Hide',
+  scenarios: 'Scenarios',
+  supportive: 'supportive',
+  showDetails: 'Details',
+  timestamp: 'Timestamp',
+  trade: 'Trade',
+  verdict: 'Verdict',
 }
 
 const props = defineProps<{ id?: string | string[] }>()
@@ -284,10 +389,8 @@ const validationLoading = ref(false)
 const validationError = ref('')
 const latestRecommendation = ref<StrategyRecommendation | null>(null)
 const recommendations = ref<StrategyRecommendation[]>([])
-const recommendationsScrollTop = ref(0)
+const expandedRecommendationIds = ref<Set<string>>(new Set())
 const feeRate = ref<number>(0)
-const recommendationRowHeight = 40
-const recommendationViewportHeight = 320
 
 type ApiError = {
   response?: {
@@ -335,18 +438,6 @@ const recommendationDisplay = computed(() => {
   if (!latestRecommendation.value) return displayForVerdict('defer')
   return displayForVerdict(latestRecommendation.value.verdict)
 })
-const visibleRecommendationStart = computed(() => Math.floor(recommendationsScrollTop.value / recommendationRowHeight))
-const visibleRecommendationCount = computed(() => Math.ceil(recommendationViewportHeight / recommendationRowHeight) + 4)
-const visibleRecommendations = computed(() => {
-  const start = visibleRecommendationStart.value
-  return recommendations.value.slice(start, start + visibleRecommendationCount.value)
-})
-const recommendationsTopPadding = computed(() => visibleRecommendationStart.value * recommendationRowHeight)
-const recommendationsBottomPadding = computed(() => {
-  const remaining = recommendations.value.length - visibleRecommendationStart.value - visibleRecommendations.value.length
-  return Math.max(0, remaining * recommendationRowHeight)
-})
-
 let searchTimeout: ReturnType<typeof setTimeout>
 
 onMounted(async () => {
@@ -476,8 +567,102 @@ function displayForVerdict(verdict: StrategyRecommendation['verdict']) {
   return { label: 'Not sure', class: 'recommendation-unsure' }
 }
 
-function handleRecommendationsScroll(event: Event) {
-  recommendationsScrollTop.value = (event.target as HTMLElement).scrollTop
+function scenarioCaseLabel(scenarioCase: 'base' | 'bull' | 'bear'): string {
+  return t[scenarioCase]
+}
+
+function scenarioDirectionLabel(direction: string): string {
+  if (direction === 'supportive') return t.supportive
+  if (direction === 'adverse') return t.adverse
+  if (direction === 'conditional') return t.conditional
+  return direction
+}
+
+function sortedScenarioFrames(
+  frames: StrategyRecommendation['scenario_frames'],
+): StrategyRecommendation['scenario_frames'] {
+  const order = { bull: 0, base: 1, bear: 2 }
+  return [...frames].sort((a, b) => order[a.scenario_case] - order[b.scenario_case])
+}
+
+type RiskNoteSegment = {
+  text: string
+  isHeadline: boolean
+}
+
+type ContextInputItem = {
+  headline?: unknown
+}
+
+function scenarioEvidenceLines(frame: StrategyRecommendation['scenario_frames'][number]): string[] {
+  const references = [...frame.catalysts, ...frame.invalidating_conditions]
+  return Array.from(new Set(
+    references
+      .filter(item => item.source === 'context_inputs')
+      .map(item => item.text)
+      .filter(Boolean),
+  ))
+}
+
+function riskNoteSegments(
+  riskNotes: string,
+  recommendation: StrategyRecommendation,
+): RiskNoteSegment[] {
+  const headlines = contextHeadlines(recommendation)
+  const segments: RiskNoteSegment[] = []
+  let cursor = 0
+
+  while (cursor < riskNotes.length) {
+    const nextMatch = headlines
+      .map(headline => ({ headline, start: riskNotes.indexOf(headline, cursor) }))
+      .filter(match => match.start >= 0)
+      .sort((a, b) => a.start - b.start)[0]
+
+    if (!nextMatch) break
+
+    if (nextMatch.start > cursor) {
+      segments.push({ text: riskNotes.slice(cursor, nextMatch.start), isHeadline: false })
+    }
+
+    let end = nextMatch.start + nextMatch.headline.length
+    let text = nextMatch.headline
+    const trailingDot = riskNotes.slice(end).match(/^\s*\./)
+    if (trailingDot) {
+      text += '.'
+      end += trailingDot[0].length
+    }
+
+    segments.push({ text, isHeadline: true })
+    cursor = end
+  }
+
+  if (cursor < riskNotes.length) {
+    segments.push({ text: riskNotes.slice(cursor), isHeadline: false })
+  }
+
+  return segments.length ? segments : [{ text: riskNotes, isHeadline: false }]
+}
+
+function contextHeadlines(recommendation: StrategyRecommendation): string[] {
+  const items = recommendation.context_inputs.items
+  if (!Array.isArray(items)) return []
+  return items
+    .map(item => (item as ContextInputItem).headline)
+    .filter((headline): headline is string => typeof headline === 'string' && Boolean(headline))
+}
+
+function isRecommendationExpanded(id: string): boolean {
+  return expandedRecommendationIds.value.has(id)
+}
+
+function toggleRecommendation(id: string) {
+  const next = new Set(expandedRecommendationIds.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  expandedRecommendationIds.value = next
 }
 </script>
 
@@ -488,14 +673,29 @@ function handleRecommendationsScroll(event: Event) {
 .advisory-panel { margin-top: 1rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; }
 .advisory-panel h2 { font-size: 1.125rem; margin: 0 0 0.5rem; }
 .advisory-panel p { margin: 0.5rem 0; }
+.scenario-section { margin-top: 0.875rem; }
+.scenario-section h3 { font-size: 0.9375rem; margin: 0 0 0.5rem; }
 .advisory-panel-danger { color: var(--danger); border-color: var(--danger); }
 .recommendation-do { color: #00a651; font-weight: 800; }
 .recommendation-dont { color: #e11937; font-weight: 800; }
 .recommendation-unsure { color: var(--text); font-weight: 400; }
-.recommendations-table-viewport { max-height: 20rem; overflow: auto; margin-top: 0.75rem; }
+.recommendations-table-viewport { max-height: 30rem; overflow: auto; margin-top: 0.75rem; }
 .recommendations-table { width: 100%; table-layout: fixed; }
 .recommendations-table th,
 .recommendations-table td { padding: 0.5rem; text-align: left; }
 .recommendations-table td { font-size: 0.8125rem; }
 .recommendations-table thead th { position: sticky; top: 0; background: var(--card-bg); z-index: 1; }
+.recommendation-toggle { appearance: none; background: transparent; border: 0; color: var(--text); cursor: pointer; margin-right: 0.5rem; padding: 0; vertical-align: middle; }
+.chevron-triangle { width: 0; height: 0; border-top: 0.35rem solid transparent; border-bottom: 0.35rem solid transparent; border-left: 0.5rem solid currentColor; display: inline-block; transition: transform 0.2s ease; }
+.recommendation-toggle.expanded .chevron-triangle { transform: rotate(90deg); }
+.recommendation-detail-row td { background: rgba(0,0,0,0.03); }
+.recommendation-detail-row p { margin: 0.5rem 0; }
+.scenario-list { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+.scenario-frame { border: 1px solid var(--border); border-radius: 6px; font-size: 0.8125rem; padding: 0.625rem; }
+.scenario-frame-header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.scenario-frame p { font-size: 0.8125rem; line-height: 1.35; }
+.scenario-frame span { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 0.125rem; }
+.scenario-frame-header span { margin-top: 0; text-align: right; }
+.scenario-evidence { display: grid; gap: 0.25rem; margin-top: 0.375rem; }
+.scenario-evidence span { color: var(--text); font-size: 0.75rem; line-height: 1.3; }
 </style>

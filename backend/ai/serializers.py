@@ -1,6 +1,13 @@
 from rest_framework import serializers
 
-from .models import AIAuth, AIInstanceKey, PROVIDER_CHOICES, TASK_MODELS, StrategyRecommendation
+from .models import (
+    PROVIDER_CHOICES,
+    TASK_MODELS,
+    AIAuth,
+    AIInstanceKey,
+    StrategyRecommendation,
+    StrategyScenarioFrame,
+)
 
 
 class AIAuthSettingsSerializer(serializers.ModelSerializer):
@@ -106,9 +113,26 @@ class StrategyValidationRequestSerializer(serializers.Serializer):
         return value.upper()
 
 
+class StrategyScenarioFrameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StrategyScenarioFrame
+        fields = (
+            "id",
+            "scenario_case",
+            "direction",
+            "catalysts",
+            "invalidating_conditions",
+            "confidence_band",
+            "risk_notes",
+            "position_size_guidance",
+            "generated_at",
+        )
+
+
 class StrategyRecommendationSerializer(serializers.ModelSerializer):
     asset_display_symbol = serializers.CharField(source="asset.display_symbol", read_only=True)
     asset_name = serializers.CharField(source="asset.name", read_only=True)
+    scenario_frames = StrategyScenarioFrameSerializer(many=True, read_only=True)
 
     class Meta:
         model = StrategyRecommendation
@@ -128,5 +152,6 @@ class StrategyRecommendationSerializer(serializers.ModelSerializer):
             "divergence_inputs",
             "verdict",
             "rationale",
+            "scenario_frames",
             "recorded_at",
         )
