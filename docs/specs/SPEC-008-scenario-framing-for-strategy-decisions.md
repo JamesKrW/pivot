@@ -243,6 +243,14 @@ Reason:
 - scenarios are part of the recommendation record
 - transient-only display would lose audit and review value
 
+### Acceptance Clarification: Scenario Quality Is Action-Relative and News-Causal
+
+Passing deterministic structure is not enough for acceptance. A releaseable scenario frame must explain the causal chain from available evidence to the submitted action:
+
+`news event or condition -> market/asset implication -> effect on submitted BUY/SELL trade`
+
+Accepted examples must show how the same evidence can be favorable or adverse relative to the submitted action. A scenario for a SELL candidate must not read like a BUY recommendation with labels inverted, and a scenario for a BUY candidate must not ignore news that weakens the trade.
+
 ## Constraints
 
 - Scenario framing must consume explicit candidate and recommendation evidence; it must not invent trades.
@@ -270,4 +278,4 @@ This SPEC should remain independently mergeable and user-releaseable when implem
 
 Expected user-facing value:
 
-- users can review paper-trade recommendations with explicit catalysts, scenario boundaries, uncertainty, and risk framing before deciding whether to act.
+- users can review trade recommendations with explicit catalysts, scenario boundaries, uncertainty, and risk framing before deciding whether to act.

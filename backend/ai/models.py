@@ -4,7 +4,6 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 
-
 PROVIDER_CHOICES = [
     ("openai", "OpenAI"),
     ("anthropic", "Anthropic"),
@@ -170,7 +169,48 @@ class StrategyRecommendation(models.Model):
         db_table = "strategy_recommendations"
         ordering = ["-recorded_at"]
         indexes = [
-            models.Index(fields=["user", "-recorded_at"]),
-            models.Index(fields=["portfolio", "-recorded_at"]),
-            models.Index(fields=["asset", "-recorded_at"]),
+            models.Index(fields=["user", "-recorded_at"], name="strategy_re_user_id_369586_idx"),
+            models.Index(fields=["portfolio", "-recorded_at"], name="strategy_re_portfol_a7c5f2_idx"),
+            models.Index(fields=["asset", "-recorded_at"], name="strategy_re_asset_i_83688c_idx"),
+        ]
+
+
+class StrategyScenarioFrame(models.Model):
+    SCENARIO_CASE_CHOICES = [
+        ("base", "Base"),
+        ("bull", "Bull"),
+        ("bear", "Bear"),
+    ]
+    CONFIDENCE_BAND_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    recommendation = models.ForeignKey(
+        StrategyRecommendation,
+        on_delete=models.CASCADE,
+        related_name="scenario_frames",
+    )
+    scenario_case = models.CharField(max_length=10, choices=SCENARIO_CASE_CHOICES)
+    direction = models.CharField(max_length=32)
+    catalysts = models.JSONField()
+    invalidating_conditions = models.JSONField()
+    confidence_band = models.CharField(max_length=10, choices=CONFIDENCE_BAND_CHOICES)
+    risk_notes = models.TextField()
+    position_size_guidance = models.TextField()
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "strategy_scenario_frames"
+        ordering = ["generated_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recommendation", "scenario_case"],
+                name="unique_strategy_scenario_case_per_recommendation",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["recommendation", "scenario_case"], name="strategy_sc_recomme_68964d_idx"),
         ]

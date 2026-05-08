@@ -14,19 +14,19 @@ SPEC-008 Scenario Framing for Strategy Decisions
 
 ## Status
 
-planned
+done
 
 ## Owner
 
-unassigned
+Codex / implementation
 
 ## Date Started
 
-YYYY-MM-DD
+2026-05-07
 
 ## Date Completed
 
-YYYY-MM-DD
+2026-05-07
 
 ## Branch
 
@@ -127,7 +127,9 @@ Milestone 08 intentionally lets AI do analytical work by generating structured s
 
 ## Implementation Notes / What Was Done
 
-Not started.
+- Added linked `StrategyScenarioFrame` records with base/bull/bear cases, coarse confidence bands, catalyst and invalidation lists, risk notes, position-size guidance, and generated timestamp.
+- Added deterministic `validate_scenario_frame_payloads` boundary for case labels, confidence labels, case cap, required risk fields, supported evidence sources, and new-trade-idea rejection.
+- Added regression tests for valid payloads, invalid labels, missing risk fields, unsupported catalysts, cap violations, and new trade idea attempts.
 
 ## Open Follow-Ups
 

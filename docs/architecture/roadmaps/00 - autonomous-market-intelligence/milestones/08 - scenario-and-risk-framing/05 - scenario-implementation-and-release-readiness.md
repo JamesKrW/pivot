@@ -14,19 +14,19 @@ SPEC-008 Scenario Framing for Strategy Decisions
 
 ## Status
 
-planned
+blocked
 
 ## Owner
 
-unassigned
+Codex / implementation
 
 ## Date Started
 
-YYYY-MM-DD
+2026-05-07
 
 ## Date Completed
 
-YYYY-MM-DD
+Blocked 2026-05-07 after UAT/live-example scenario quality failure.
 
 ## Branch
 
@@ -56,6 +56,8 @@ feat/autonomous/08-scenario-risk
 ## Background
 
 Milestone 08 should ship as a coherent user-facing extension of strategy validation. This task is responsible for final integration, milestone-wide verification, and explicit notes about any intentionally deferred regeneration or review tooling.
+
+This task was reopened from done to blocked after UAT/live examples showed the implementation met persistence, display, and deterministic validation requirements but failed the scenario quality acceptance bar.
 
 ## Detailed Requirements
 
@@ -105,10 +107,25 @@ Milestone 08 should ship as a coherent user-facing extension of strategy validat
 - release notes and follow-ups are explicit
 - milestone remains user-releaseable
 
+## Blocker
+
+UAT/live examples failed release readiness because scenario frames were too generic and similar across cases, biased toward BUY-shaped framing, weak for SELL candidates, weak at explaining news causality, and too often dominated by fallback/template language.
+
+Task 05 cannot return to done until tasks 06, 07, and 08 reset acceptance, remediate generation/validation, and repeat release readiness with accepted BUY and SELL examples.
+
 ## Implementation Notes / What Was Done
 
-Not started.
+- Completed end-to-end scenario framing from strategy validation through linked persistence, API serialization, and manual advisory/review display.
+- Added deterministic validation coverage and persistence/risk-framing tests.
+- Verified manual trade execution remains independent of recommendation and scenario output.
+- Hardened fallback scenario output so base, bull, and bear frames expose distinct catalysts, invalidating conditions, risk framing, and size guidance instead of repeated prompt-like metadata.
+- Ran focused backend lint, full backend tests, frontend typecheck, affected frontend test, frontend lint, and full frontend tests.
+- Later UAT/live examples showed those implementation notes remain true for structure and plumbing, but release readiness is blocked by scenario quality.
 
 ## Open Follow-Ups
 
-- none
+- Full backend lint still fails on existing unrelated baseline issues outside the touched files.
+- Full frontend lint still fails on existing unrelated baseline issues outside the touched files.
+- Full frontend unit tests still fail on existing unrelated `DiscoveryView` and `AssetsView` test/mock issues.
+- Regeneration history and operator review hardening remain intentionally deferred.
+- Complete tasks 06, 07, and 08 before marking release readiness done again.

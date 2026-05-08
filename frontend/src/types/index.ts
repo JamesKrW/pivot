@@ -190,6 +190,18 @@ export interface AssetAIInsight {
   news_items: AssetAIInsightNewsItem[]
 }
 
+export interface StrategyScenarioFrame {
+  id: string
+  scenario_case: 'base' | 'bull' | 'bear'
+  direction: string
+  catalysts: Array<{ source: string; text: string }>
+  invalidating_conditions: Array<{ source: string; text: string }>
+  confidence_band: 'low' | 'medium' | 'high'
+  risk_notes: string
+  position_size_guidance: string
+  generated_at: string
+}
+
 export interface StrategyRecommendation {
   id: string
   candidate_id: string
@@ -206,6 +218,7 @@ export interface StrategyRecommendation {
   divergence_inputs: Record<string, unknown> | null
   verdict: 'approve' | 'reject' | 'defer'
   rationale: string
+  scenario_frames: StrategyScenarioFrame[]
   recorded_at: string
 }
 

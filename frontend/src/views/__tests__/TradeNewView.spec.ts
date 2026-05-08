@@ -291,7 +291,42 @@ describe('TradeNewView', () => {
       sentiment_trajectory_inputs: {},
       divergence_inputs: null,
       verdict: 'reject',
-      rationale: 'This trade idea looks weak right now because price momentum is moving against it.',
+      rationale: 'This trade looks weak right now because price momentum is moving against it.',
+      scenario_frames: [
+        {
+          id: 'scenario-1',
+          scenario_case: 'base',
+          direction: 'conditional',
+          catalysts: [{ source: 'technical_inputs', text: 'Technical vote: negative' }],
+          invalidating_conditions: [{ source: 'context_inputs', text: 'Context improves' }],
+          confidence_band: 'low',
+          risk_notes: 'This looks weak. Skip it unless the setup improves clearly.',
+          position_size_guidance: 'Treat the candidate as advisory under current guardrails.',
+          generated_at: '2026-04-16T00:00:00Z',
+        },
+        {
+          id: 'scenario-2',
+          scenario_case: 'bull',
+          direction: 'supportive',
+          catalysts: [],
+          invalidating_conditions: [],
+          confidence_band: 'medium',
+          risk_notes: 'Asset upside would support this trade.',
+          position_size_guidance: 'Keep sizing modest.',
+          generated_at: '2026-04-16T00:00:00Z',
+        },
+        {
+          id: 'scenario-3',
+          scenario_case: 'bear',
+          direction: 'adverse',
+          catalysts: [],
+          invalidating_conditions: [],
+          confidence_band: 'medium',
+          risk_notes: 'Asset downside would work against this trade.',
+          position_size_guidance: 'Keep sizing modest.',
+          generated_at: '2026-04-16T00:00:00Z',
+        },
+      ],
       recorded_at: '2026-04-16T00:00:00Z',
     } as never)
     vi.mocked(createTrade).mockResolvedValue({} as never)
@@ -322,14 +357,194 @@ describe('TradeNewView', () => {
       rationale: undefined,
     })
     expect(wrapper.text()).toContain("Don't")
-    expect(wrapper.text()).toContain('This trade idea looks weak right now because price momentum is moving against it.')
+    expect(wrapper.text()).toContain('This trade looks weak right now because price momentum is moving against it.')
+    expect(wrapper.text()).toContain('Base: conditional for BUY')
+    expect(wrapper.text()).toContain('Asset bullish: supportive for BUY')
+    expect(wrapper.text()).toContain('Asset bearish: adverse for BUY')
+    expect(wrapper.text()).toContain('This looks weak')
+    expect(wrapper.text()).not.toContain('Technical vote: negative')
+    expect(wrapper.text()).not.toContain('Treat the candidate as advisory')
     expect(wrapper.text()).not.toContain('Review evidence')
     expect(wrapper.text()).toContain('Previous recommendations')
-    expect(wrapper.find('tbody tr[title]').attributes('title')).toContain('This trade idea looks weak')
+    expect(wrapper.text()).not.toContain('Scenarios')
+
+    await wrapper.find('.recommendation-toggle').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('This trade looks weak')
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('This looks weak')
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('Asset bullish: supportive for BUY')
+    expect(wrapper.find('.recommendation-detail-row').text()).not.toContain('Technical vote: negative')
 
     await wrapper.findAll('button').find(button => button.text().includes('BUY Trade'))?.trigger('click')
     await flushPromises()
 
     expect(createTrade).toHaveBeenCalled()
+  })
+
+  it('frames sell validation scenarios relative to the trade action', async () => {
+    vi.mocked(getPortfolio).mockResolvedValue({
+      id: 'portfolio-1',
+      name: 'Primary',
+      market: 'US',
+      base_currency: 'USD',
+      initial_capital: '1000.00',
+      current_cash: '1000.00',
+      is_primary: true,
+      is_simulating: false,
+      created_at: '2026-04-16T00:00:00Z',
+      updated_at: '2026-04-16T00:00:00Z',
+    } as never)
+    vi.mocked(getAsset).mockResolvedValue({
+      id: 'asset-1',
+      display_symbol: 'ALP1',
+      name: 'Alpha One',
+      market: 'US',
+    } as never)
+    vi.mocked(getAssetPrice).mockResolvedValue({
+      price: '60.00',
+      currency: 'USD',
+      market_open: true,
+    } as never)
+    vi.mocked(validateStrategyCandidate).mockResolvedValue({
+      id: 'recommendation-sell-1',
+      candidate_id: 'candidate-1',
+      portfolio: 'portfolio-1',
+      asset: 'asset-1',
+      asset_display_symbol: 'ALP1',
+      asset_name: 'Alpha One',
+      action: 'SELL',
+      quantity: 1,
+      candidate: {},
+      technical_inputs: {},
+      context_inputs: {},
+      sentiment_trajectory_inputs: {},
+      divergence_inputs: null,
+      verdict: 'defer',
+      rationale: 'The sell trade needs clearer confirmation.',
+      scenario_frames: [
+        {
+          id: 'scenario-sell-1',
+          scenario_case: 'bull',
+          direction: 'adverse',
+          catalysts: [],
+          invalidating_conditions: [],
+          confidence_band: 'medium',
+          risk_notes: 'Asset upside would work against this sell trade.',
+          position_size_guidance: 'Keep sizing modest.',
+          generated_at: '2026-04-16T00:00:00Z',
+        },
+        {
+          id: 'scenario-sell-2',
+          scenario_case: 'bear',
+          direction: 'supportive',
+          catalysts: [],
+          invalidating_conditions: [],
+          confidence_band: 'medium',
+          risk_notes: 'Asset downside would support this sell trade.',
+          position_size_guidance: 'Keep sizing modest.',
+          generated_at: '2026-04-16T00:00:00Z',
+        },
+      ],
+      recorded_at: '2026-04-16T00:00:00Z',
+    } as never)
+
+    const wrapper = mount(TradeNewView, {
+      global: {
+        stubs: {
+          RouterLink: true,
+          MarketBadge: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.find('select').setValue('SELL')
+    await wrapper.find('input[type="number"]').setValue(1)
+    await flushPromises()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Should I?'))?.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Asset bullish: adverse for SELL')
+    expect(wrapper.text()).toContain('Asset bearish: supportive for SELL')
+    expect(wrapper.text()).toContain('Asset upside would work against this sell trade.')
+    expect(wrapper.text()).toContain('Asset downside would support this sell trade.')
+    expect(wrapper.text()).not.toContain('Asset bullish: supportive for BUY')
+    expect(wrapper.text()).not.toContain('Asset bearish: adverse for BUY')
+  })
+
+  it('renders stored recommendation scenario frames with their stored trade action', async () => {
+    vi.mocked(getPortfolio).mockResolvedValue({
+      id: 'portfolio-1',
+      name: 'Primary',
+      market: 'US',
+      base_currency: 'USD',
+      initial_capital: '1000.00',
+      current_cash: '1000.00',
+      is_primary: true,
+      is_simulating: false,
+      created_at: '2026-04-16T00:00:00Z',
+      updated_at: '2026-04-16T00:00:00Z',
+    } as never)
+    vi.mocked(getAsset).mockResolvedValue({
+      id: 'asset-1',
+      display_symbol: 'ALP1',
+      name: 'Alpha One',
+      market: 'US',
+    } as never)
+    vi.mocked(getAssetPrice).mockResolvedValue({
+      price: '60.00',
+      currency: 'USD',
+      market_open: true,
+    } as never)
+    vi.mocked(getStrategyRecommendations).mockResolvedValue([{
+      id: 'stored-recommendation-1',
+      candidate_id: 'candidate-1',
+      portfolio: 'portfolio-1',
+      asset: 'asset-1',
+      asset_display_symbol: 'ALP1',
+      asset_name: 'Alpha One',
+      action: 'SELL',
+      quantity: 2,
+      candidate: {},
+      technical_inputs: {},
+      context_inputs: {},
+      sentiment_trajectory_inputs: {},
+      divergence_inputs: null,
+      verdict: 'approve',
+      rationale: 'Stored sell recommendation.',
+      scenario_frames: [
+        {
+          id: 'stored-scenario-1',
+          scenario_case: 'bull',
+          direction: 'adverse',
+          catalysts: [],
+          invalidating_conditions: [],
+          confidence_band: 'high',
+          risk_notes: 'Stored bullish case is adverse to the sell.',
+          position_size_guidance: 'Keep sizing modest.',
+          generated_at: '2026-04-16T00:00:00Z',
+        },
+      ],
+      recorded_at: '2026-04-16T00:00:00Z',
+    }] as never)
+
+    const wrapper = mount(TradeNewView, {
+      global: {
+        stubs: {
+          RouterLink: true,
+          MarketBadge: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.find('.recommendation-toggle').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('Stored sell recommendation.')
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('Asset bullish: adverse for SELL')
+    expect(wrapper.find('.recommendation-detail-row').text()).toContain('Stored bullish case is adverse to the sell.')
   })
 })

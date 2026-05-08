@@ -14,19 +14,19 @@ SPEC-008 Scenario Framing for Strategy Decisions
 
 ## Status
 
-planned
+done
 
 ## Owner
 
-unassigned
+Codex / implementation
 
 ## Date Started
 
-YYYY-MM-DD
+2026-05-07
 
 ## Date Completed
 
-YYYY-MM-DD
+2026-05-07
 
 ## Branch
 
@@ -110,7 +110,10 @@ Scenario frames are part of the recommendation record. They should be visible im
 
 ## Implementation Notes / What Was Done
 
-Not started.
+- Extended frontend recommendation types with scenario frames.
+- Rendered compact scenario frames after the opt-in manual trade advisory result.
+- Added scenario-case summaries to the previous recommendation review table without coupling manual trade submission to scenario state.
+- Updated `TradeNewView` coverage to assert scenario display while preserving separate manual submit behavior.
 
 ## Open Follow-Ups
 

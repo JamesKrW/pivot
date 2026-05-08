@@ -14,19 +14,19 @@ SPEC-008 Scenario Framing for Strategy Decisions
 
 ## Status
 
-planned
+in_progress
 
 ## Owner
 
-unassigned
+Codex / implementation
 
 ## Date Started
 
-YYYY-MM-DD
+2026-05-07
 
 ## Date Completed
 
-YYYY-MM-DD
+Reopened 2026-05-07 after UAT/live-example scenario quality failure.
 
 ## Branch
 
@@ -90,7 +90,10 @@ feat/autonomous/08-scenario-risk
 10. Use existing guardrails and candidate facts for risk framing.
 11. Keep scenario output advisory, paper-only, and non-blocking.
 12. Surface scenario frames in manual advisory and recommendation review flows.
-13. Make final handoff explicit about:
+13. Execute task 06 to reset acceptance around scenario quality gaps and action-relative examples.
+14. Execute task 07 to remediate generation and validation until frames are action-relative and news-causal.
+15. Execute task 08 to repeat release readiness with live BUY and SELL examples.
+16. Make final handoff explicit about:
     - whether scenario frames persist end to end
     - whether deterministic validation rejects unsupported frames
     - whether manual trade execution remains non-blocking
@@ -121,10 +124,28 @@ feat/autonomous/08-scenario-risk
 - manual trade execution remains non-blocking
 - milestone remains user-releaseable
 
+## Reopened Gap
+
+UAT/live examples showed the implementation met the deterministic structure but not the acceptance quality bar. Scenario frames were too generic and similar across cases, biased toward BUY-shaped framing, weak for SELL candidates, weak at explaining news causality, and too often dominated by fallback/template language.
+
+## Release Criteria Addendum
+
+- At least one accepted BUY example must show an explicit news event or condition, its market or asset implication, and its effect on the submitted trade.
+- At least one accepted SELL example must show an explicit news event or condition, its market or asset implication, and its effect on the submitted trade.
+- Scenario frames must be action-relative: favorable and adverse cases must be interpreted relative to the submitted BUY or SELL action, not as generic asset forecasts.
+- Scenario frames must be news-causal when news context exists: event or condition -> market/asset implication -> effect on submitted BUY/SELL trade.
+
 ## Implementation Notes / What Was Done
 
-Not started.
+- Executed Milestone 08 task files in order.
+- Scenario frames now persist end to end as linked `StrategyScenarioFrame` records on recommendations.
+- Deterministic validation rejects invalid labels, unsupported evidence sources, missing risk fields, scenario cap violations, and new trade idea payloads before persistence.
+- Manual trade execution remains non-blocking; scenario generation/display is advisory only.
+- Future regeneration history was intentionally deferred.
+- Reopened Milestone 08 for docs-only acceptance reset after UAT/live examples exposed scenario quality gaps.
 
 ## Open Follow-Ups
 
-- none
+- Full backend lint, full frontend lint, and full frontend unit tests have unrelated existing baseline failures documented in task 05.
+- Compose watch ignores backend migrations, so the new migration was copied into the running backend container for verification.
+- Tasks 06, 07, and 08 must close the scenario quality gap before release readiness can be restored.

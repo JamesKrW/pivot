@@ -189,6 +189,20 @@
           {{ recommendationDisplay.label }}
         </h2>
         <p>{{ latestRecommendation.rationale }}</p>
+        <div
+          v-if="latestRecommendation.scenario_frames.length"
+          class="scenario-list"
+        >
+          <div
+            v-for="frame in latestRecommendation.scenario_frames"
+            :key="frame.id"
+            class="scenario-frame"
+          >
+            <strong>{{ scenarioFrameLabel(frame, latestRecommendation.action) }}</strong>
+            <span>{{ t.confidence }}: {{ frame.confidence_band }}</span>
+            <p>{{ frame.risk_notes }}</p>
+          </div>
+        </div>
       </div>
       <div
         v-if="recommendations.length"
@@ -196,42 +210,72 @@
       >
         <strong>{{ t.previousRecommendations }}</strong>
         <div
-          ref="recommendationsViewport"
           class="recommendations-table-viewport"
-          @scroll="handleRecommendationsScroll"
         >
           <table class="recommendations-table">
             <thead>
               <tr>
-                <th>Asset</th>
-                <th>Trade</th>
-                <th>Amount</th>
-                <th>Verdict</th>
-                <th>Timestamp</th>
+                <th>{{ t.asset }}</th>
+                <th>{{ t.trade }}</th>
+                <th>{{ t.amount }}</th>
+                <th>{{ t.verdict }}</th>
+                <th>{{ t.timestamp }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr :style="{ height: `${recommendationsTopPadding}px` }">
-                <td colspan="5" />
-              </tr>
-              <tr
-                v-for="item in visibleRecommendations"
+              <template
+                v-for="item in recommendations"
                 :key="item.id"
-                :title="item.rationale"
               >
-                <td>{{ item.asset_display_symbol }}</td>
-                <td>{{ item.action }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>
-                  <span :class="displayForVerdict(item.verdict).class">
-                    {{ displayForVerdict(item.verdict).label }}
-                  </span>
-                </td>
-                <td>{{ formatDate(item.recorded_at) }}</td>
-              </tr>
-              <tr :style="{ height: `${recommendationsBottomPadding}px` }">
-                <td colspan="5" />
-              </tr>
+                <tr>
+                  <td>
+                    <button
+                      class="recommendation-toggle"
+                      :class="{ expanded: isRecommendationExpanded(item.id) }"
+                      type="button"
+                      :aria-expanded="isRecommendationExpanded(item.id)"
+                      :aria-label="isRecommendationExpanded(item.id) ? t.hideDetails : t.showDetails"
+                      @click="toggleRecommendation(item.id)"
+                    >
+                      <span
+                        class="chevron-triangle"
+                        aria-hidden="true"
+                      />
+                    </button>
+                    {{ item.asset_display_symbol }}
+                  </td>
+                  <td>{{ item.action }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td>
+                    <span :class="displayForVerdict(item.verdict).class">
+                      {{ displayForVerdict(item.verdict).label }}
+                    </span>
+                  </td>
+                  <td>{{ formatDate(item.recorded_at) }}</td>
+                </tr>
+                <tr
+                  v-if="isRecommendationExpanded(item.id)"
+                  class="recommendation-detail-row"
+                >
+                  <td colspan="5">
+                    <p>{{ item.rationale }}</p>
+                    <div
+                      v-if="item.scenario_frames.length"
+                      class="scenario-list"
+                    >
+                      <div
+                        v-for="frame in item.scenario_frames"
+                        :key="frame.id"
+                        class="scenario-frame"
+                      >
+                        <strong>{{ scenarioFrameLabel(frame, item.action) }}</strong>
+                        <span>{{ t.confidence }}: {{ frame.confidence_band }}</span>
+                        <p>{{ frame.risk_notes }}</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -254,6 +298,20 @@ const t = {
   shouldI: 'Should I?',
   previousRecommendations: 'Previous recommendations',
   validationFailed: 'Validation failed',
+  amount: 'Amount',
+  asset: 'Asset',
+  base: 'Base',
+  bull: 'Asset bullish',
+  bear: 'Asset bearish',
+  conditional: 'conditional',
+  confidence: 'Confidence',
+  adverse: 'adverse',
+  hideDetails: 'Hide',
+  supportive: 'supportive',
+  showDetails: 'Details',
+  timestamp: 'Timestamp',
+  trade: 'Trade',
+  verdict: 'Verdict',
 }
 
 const props = defineProps<{ id?: string | string[] }>()
@@ -284,10 +342,8 @@ const validationLoading = ref(false)
 const validationError = ref('')
 const latestRecommendation = ref<StrategyRecommendation | null>(null)
 const recommendations = ref<StrategyRecommendation[]>([])
-const recommendationsScrollTop = ref(0)
+const expandedRecommendationIds = ref<Set<string>>(new Set())
 const feeRate = ref<number>(0)
-const recommendationRowHeight = 40
-const recommendationViewportHeight = 320
 
 type ApiError = {
   response?: {
@@ -335,18 +391,6 @@ const recommendationDisplay = computed(() => {
   if (!latestRecommendation.value) return displayForVerdict('defer')
   return displayForVerdict(latestRecommendation.value.verdict)
 })
-const visibleRecommendationStart = computed(() => Math.floor(recommendationsScrollTop.value / recommendationRowHeight))
-const visibleRecommendationCount = computed(() => Math.ceil(recommendationViewportHeight / recommendationRowHeight) + 4)
-const visibleRecommendations = computed(() => {
-  const start = visibleRecommendationStart.value
-  return recommendations.value.slice(start, start + visibleRecommendationCount.value)
-})
-const recommendationsTopPadding = computed(() => visibleRecommendationStart.value * recommendationRowHeight)
-const recommendationsBottomPadding = computed(() => {
-  const remaining = recommendations.value.length - visibleRecommendationStart.value - visibleRecommendations.value.length
-  return Math.max(0, remaining * recommendationRowHeight)
-})
-
 let searchTimeout: ReturnType<typeof setTimeout>
 
 onMounted(async () => {
@@ -476,8 +520,36 @@ function displayForVerdict(verdict: StrategyRecommendation['verdict']) {
   return { label: 'Not sure', class: 'recommendation-unsure' }
 }
 
-function handleRecommendationsScroll(event: Event) {
-  recommendationsScrollTop.value = (event.target as HTMLElement).scrollTop
+function scenarioCaseLabel(scenarioCase: 'base' | 'bull' | 'bear'): string {
+  return t[scenarioCase]
+}
+
+function scenarioDirectionLabel(direction: string): string {
+  if (direction === 'supportive') return t.supportive
+  if (direction === 'adverse') return t.adverse
+  if (direction === 'conditional') return t.conditional
+  return direction
+}
+
+function scenarioFrameLabel(
+  frame: StrategyRecommendation['scenario_frames'][number],
+  tradeAction: StrategyRecommendation['action'],
+): string {
+  return `${scenarioCaseLabel(frame.scenario_case)}: ${scenarioDirectionLabel(frame.direction)} for ${tradeAction}`
+}
+
+function isRecommendationExpanded(id: string): boolean {
+  return expandedRecommendationIds.value.has(id)
+}
+
+function toggleRecommendation(id: string) {
+  const next = new Set(expandedRecommendationIds.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  expandedRecommendationIds.value = next
 }
 </script>
 
@@ -498,4 +570,12 @@ function handleRecommendationsScroll(event: Event) {
 .recommendations-table td { padding: 0.5rem; text-align: left; }
 .recommendations-table td { font-size: 0.8125rem; }
 .recommendations-table thead th { position: sticky; top: 0; background: var(--card-bg); z-index: 1; }
+.recommendation-toggle { appearance: none; background: transparent; border: 0; color: var(--text); cursor: pointer; margin-right: 0.5rem; padding: 0; vertical-align: middle; }
+.chevron-triangle { width: 0; height: 0; border-top: 0.35rem solid transparent; border-bottom: 0.35rem solid transparent; border-left: 0.5rem solid currentColor; display: inline-block; transition: transform 0.2s ease; }
+.recommendation-toggle.expanded .chevron-triangle { transform: rotate(90deg); }
+.recommendation-detail-row td { background: rgba(0,0,0,0.03); }
+.recommendation-detail-row p { margin: 0.5rem 0; }
+.scenario-list { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
+.scenario-frame { border-top: 1px solid var(--border); padding-top: 0.5rem; }
+.scenario-frame span { display: block; color: var(--text-muted); font-size: 0.8125rem; margin-top: 0.125rem; }
 </style>

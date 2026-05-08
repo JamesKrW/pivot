@@ -163,7 +163,11 @@ class AISettingsViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"], url_path="strategy-recommendations")
     def strategy_recommendations(self, request):
-        queryset = StrategyRecommendation.objects.filter(user=request.user).select_related("asset", "portfolio")
+        queryset = (
+            StrategyRecommendation.objects.filter(user=request.user)
+            .select_related("asset", "portfolio")
+            .prefetch_related("scenario_frames")
+        )
         portfolio_id = request.query_params.get("portfolio_id")
         if portfolio_id:
             queryset = queryset.filter(portfolio_id=portfolio_id)

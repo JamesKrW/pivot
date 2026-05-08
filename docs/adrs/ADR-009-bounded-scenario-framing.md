@@ -18,6 +18,12 @@ Strategy validation can approve, reject, or defer explicit paper-trade candidate
 
 Add AI-generated structured scenario frames linked to paper-only recommendation records. Frames must be generated from stored recommendation evidence, capped to `base`, `bull`, and `bear` cases, validated deterministically before persistence, and kept separate from execution authority.
 
+## Amendment: Scenario Quality Boundary
+
+The boundary is not only deterministic structure. Scenario frames must also satisfy a quality boundary: they must be action-relative, meaning favorable and adverse paths are interpreted against the submitted BUY or SELL candidate, and news-causal when news context exists, meaning they connect event or condition to market or asset implication to effect on the submitted trade.
+
+Generic templates, fallback-dominant text, BUY-shaped framing for SELL candidates, or scenario cases that differ only by label are outside the accepted boundary even if their fields validate.
+
 ## Consequences
 
 - Scenario framing becomes auditable and reviewable alongside the recommendation

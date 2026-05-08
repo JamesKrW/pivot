@@ -14,19 +14,19 @@ SPEC-008 Scenario Framing for Strategy Decisions
 
 ## Status
 
-planned
+done
 
 ## Owner
 
-unassigned
+Codex / implementation
 
 ## Date Started
 
-YYYY-MM-DD
+2026-05-07
 
 ## Date Completed
 
-YYYY-MM-DD
+2026-05-07
 
 ## Branch
 
@@ -102,7 +102,10 @@ Scenario framing is only bounded if it consumes the recommendation evidence snap
 
 ## Implementation Notes / What Was Done
 
-Not started.
+- Confirmed `StrategyRecommendation` in `backend/ai/models.py` stores candidate, technical, context, sentiment trajectory, divergence, verdict, and rationale.
+- Confirmed scenario generation belongs immediately after recommendation persistence in `StrategyValidationService.validate`.
+- Confirmed risk framing sources: `Portfolio.current_cash`, portfolio market/currency, candidate quantity, quote price, `trading.Position`, and `PortfolioGuardrails`.
+- Confirmed existing surfaces: `StrategyRecommendationSerializer`, frontend `StrategyRecommendation` type, `TradeNewView` opt-in advisory result, and previous recommendation table.
 
 ## Open Follow-Ups
 

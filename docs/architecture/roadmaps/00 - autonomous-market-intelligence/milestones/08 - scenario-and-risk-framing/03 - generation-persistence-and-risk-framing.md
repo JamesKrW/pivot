@@ -14,19 +14,19 @@ SPEC-008 Scenario Framing for Strategy Decisions
 
 ## Status
 
-planned
+done
 
 ## Owner
 
-unassigned
+Codex / implementation
 
 ## Date Started
 
-YYYY-MM-DD
+2026-05-07
 
 ## Date Completed
 
-YYYY-MM-DD
+2026-05-07
 
 ## Branch
 
@@ -118,8 +118,11 @@ Scenario frames should belong to the same evidence snapshot as the recommendatio
 
 ## Implementation Notes / What Was Done
 
-Not started.
+- Integrated scenario frame creation into strategy validation so frames share the stored recommendation evidence snapshot.
+- Added AI structured-frame generation constrained to stored evidence, with deterministic validation before persistence and deterministic fallback when AI credentials, budget, parsing, or validation are unavailable.
+- Persisted validated frames as separate linked records and exposed them through recommendation serialization.
+- Derived risk notes and position-size guidance from available cash, portfolio currency, candidate quantity, quote price, current position, and existing guardrails only.
 
 ## Open Follow-Ups
 
-- none
+- Regeneration history was intentionally deferred; original frames remain immutable after creation.
